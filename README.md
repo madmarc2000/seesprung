@@ -1,10 +1,10 @@
 # Seesprung
 
-Ein kleines LCD-Fangspiel im Stil der Taschenspiele um 1980 — eine einzige HTML-Datei, ohne Installation, ohne Server.
+Ein kleines LCD-Fangspiel im Stil der Taschenspiele um 1980. Eine einzige HTML-Datei, ohne Installation, ohne Server.
 
 ![Seesprung](screenshot.png)
 
-Aus dem Wasserflugzeug springen Fallschirmspringer. Du ruderst das Boot nach links und rechts und fängst sie, bevor sie ins Wasser fallen. Manchmal bleibt einer an der Föhre am Ufer hängen, strampelt eine Weile und reißt sich dann los — dann kommt er später unten an als gedacht.
+Aus dem Wasserflugzeug springen Fallschirmspringer. Du ruderst das Boot nach links und rechts und fängst sie, bevor sie ins Wasser fallen. Manchmal bleibt einer an der Föhre am Ufer hängen, strampelt eine Weile und reißt sich dann los. Dann kommt er später unten an als gedacht.
 
 ## Spielen
 
@@ -22,4 +22,4 @@ Aus dem Wasserflugzeug springen Fallschirmspringer. Du ruderst das Boot nach lin
 
 ## Lizenz
 
-MIT — siehe [LICENSE](LICENSE). Motiv, Grafik und Code sind eigene Arbeit.
+MIT, siehe [LICENSE](LICENSE). Motiv, Grafik und Code sind eigene Arbeit.
