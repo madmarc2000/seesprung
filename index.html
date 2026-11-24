@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Seesprung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Seesprung — LCD-Fangspiel nach dem Prinzip der Handhelds um 1980 (eigenes Motiv).
+   Layout: Hochformat = LCD oben, zwei Knöpfe unten; Querformat = Knöpfe links und rechts neben dem LCD. */
+:root {
+  --wall: #10161a;
+  --shell: #1b2a2e;
+  --shell-edge: #2c4247;
+  --ink: #eef4f1;
+  --muted: #8fb0aa;
+  --signal: #ffb347;
+  --btn: #e0573f;
+  --btn-dark: #a43625;
+  --lcd-a: #c9ceb3;
+  --lcd-b: #b3b99a;
+  --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--wall);
+  color: var(--ink);
+  font-family: var(--mono);
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+[hidden] { display: none !important; }
+.geraet {
+  width: 100%;
+  max-width: 1000px;
+  height: 100%;
+  max-height: 940px;
+  box-sizing: border-box;
+  padding: 12px 0 18px;
+  display: grid;
+  /* Hochformat: beide Knöpfe nebeneinander links unten — mit einer Hand (Daumen) spielbar */
+  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "kopf kopf kopf" "lcd lcd lcd" "links rechts .";
+  gap: 14px 18px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+@media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+  .geraet {
+    /* Querformat: beide Knöpfe nebeneinander links vom LCD — auch hier mit einer Hand spielbar */
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "kopf kopf kopf" "links rechts lcd";
+    align-items: center;
+  }
+}
+.kopf {
+  grid-area: kopf;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.kopf .titel {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: .04em;
+  margin-right: auto;
+  color: var(--ink);
+}
+.kopf .titel small { font-family: var(--mono); font-weight: 500; font-size: 11px; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+.chip {
+  font: 600 13px/1 var(--mono);
+  color: var(--ink);
+  background: var(--shell);
+  border: 1px solid var(--shell-edge);
+  border-radius: 999px;
+  padding: 9px 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.chip:focus-visible, .knopf:focus-visible, .panel button:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.lcd-rahmen {
+  grid-area: lcd;
+  min-width: 0;
+  min-height: 0;
+  align-self: center;
+  justify-self: center;
+  width: 100%;
+  width: min(100%, calc((100dvh - 150px) * 4 / 3 + 28px));
+  background: var(--shell);
+  border: 1px solid var(--shell-edge);
+  border-radius: 22px;
+  padding: 14px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.lcd-box { width: 100%; aspect-ratio: 4 / 3; position: relative; }
+.lcd-box canvas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+canvas {
+  display: block;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.25), 0 0 0 3px #0c1416;
+  touch-action: none;
+}
+.knopf-feld { display: grid; justify-items: center; gap: 8px; }
+.knopf-feld.l { grid-area: links; }
+.knopf-feld.r { grid-area: rechts; }
+.knopf {
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  border: 0;
+  background: radial-gradient(circle at 38% 32%, #ff8a6e, var(--btn) 55%, var(--btn-dark));
+  box-shadow: 0 6px 0 #5b1d13, 0 10px 18px rgba(0,0,0,.45);
+  color: rgba(255,255,255,.9);
+  font: 800 26px/1 var(--display);
+  cursor: pointer;
+  touch-action: none;
+}
+.knopf.gedrueckt { transform: translateY(4px); box-shadow: 0 2px 0 #5b1d13, 0 4px 10px rgba(0,0,0,.45); }
+.knopf-feld span { font: 600 12px/1 var(--mono); color: var(--muted); letter-spacing: .12em; }
+@media (max-height: 520px) { .knopf { width: 76px; height: 76px; } }
+@media (max-width: 480px) { .kopf .titel small { display: none; } .kopf .titel { font-size: 13px; } .chip { padding: 8px 10px; } }
+.overlay {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(16,22,26,.38);
+  border-radius: 6px;
+}
+.panel {
+  background: rgba(16,22,26,.92);
+  border: 1px solid var(--shell-edge);
+  border-radius: 18px;
+  padding: 18px 20px;
+  text-align: center;
+  max-width: min(330px, 92%);
+  box-sizing: border-box;
+}
+.panel h1 { font: 800 24px/1.1 var(--display); margin: 0 0 6px; letter-spacing: .03em; }
+.panel p { margin: 0 0 12px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.panel .gross { font: 800 44px/1 var(--display); color: var(--signal); margin: 4px 0 6px; }
+.panel .rekord { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.panel .wahl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.panel button {
+  font: 600 14px/1.2 var(--mono);
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--shell-edge);
+  background: var(--shell);
+  color: var(--ink);
+  cursor: pointer;
+}
+.panel button.primaer { background: var(--signal); color: #231400; border-color: var(--signal); }
+.panel button small { display: block; font-weight: 500; font-size: 11px; opacity: .75; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="geraet" id="geraet">
+  <div class="kopf">
+    <a class="chip zurueck" href="./" aria-label="Zurück zur Startrampe">‹ Start</a>
+    <div class="titel">SEESPRUNG<small>LCD-Fangspiel</small></div>
+    <button class="chip" id="ton" aria-label="Ton an oder aus">Ton an</button>
+    <button class="chip" id="pause" aria-label="Pause" hidden>II</button>
+  </div>
+
+  <div class="lcd-rahmen">
+    <div class="lcd-box" id="lcdBox">
+      <canvas id="lcd" aria-label="Spielfeld"></canvas>
+      <div class="overlay" id="startScreen">
+        <div class="panel">
+          <h1>SEESPRUNG</h1>
+          <p>Das Wasserflugzeug setzt Springer ab. Fang sie mit dem Boot, bevor sie ins Wasser fallen. Drei Fehler, dann ist Schluss.</p>
+          <div class="wahl">
+            <button class="primaer" data-modus="A">Spiel A<small id="rekA">Rekord 0</small></button>
+            <button data-modus="B">Spiel B<small id="rekB">Rekord 0</small></button>
+          </div>
+        </div>
+      </div>
+      <div class="overlay" id="overScreen" hidden>
+        <div class="panel">
+          <h1>Abgesoffen</h1>
+          <div class="gross" id="endPunkte">0</div>
+          <div class="rekord" id="endRekord">Rekord 0</div>
+          <div class="wahl">
+            <button class="primaer" id="nochmal">Nochmal</button>
+            <button id="menue">Menü</button>
+          </div>
+        </div>
+      </div>
+      <div class="overlay" id="pauseScreen" hidden>
+        <div class="panel">
+          <h1>Pause</h1>
+          <div class="wahl">
+            <button class="primaer" id="weiter">Weiter</button>
+            <button id="aufgeben">Aufhören</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="knopf-feld l"><button class="knopf" id="links" aria-label="Boot nach links">◀</button><span>LINKS</span></div>
+  <div class="knopf-feld r"><button class="knopf" id="rechts" aria-label="Boot nach rechts">▶</button><span>RECHTS</span></div>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/* ---------- Bühne ---------- */
+var W = 400, H = 300;
+var cv = document.getElementById('lcd');
+var ctx = cv.getContext('2d');
+var box = document.getElementById('lcdBox');
+var scale = 1;
+
+var INK = '#1d2219';
+var GHOST = 'rgba(29,34,25,0.075)';
+var PRINT = 'rgba(29,34,25,0.32)';
+
+function resize() {
+  var r = box.getBoundingClientRect();
+  var w = r.width, h = r.height;
+  if (w < 10 || h < 10) return;
+  if (w / h > 4 / 3) w = h * 4 / 3; else h = w * 3 / 4;
+  cv.style.width = Math.floor(w) + 'px';
+  cv.style.height = Math.floor(h) + 'px';
+  var dpr = Math.min(3, window.devicePixelRatio || 1);
+  cv.width = Math.round(Math.floor(w) * dpr);
+  cv.height = Math.round(Math.floor(h) * dpr);
+  scale = cv.width / W;
+  draw();
+}
+
+/* ---------- Bahnen ---------- */
+var BOOT_X = [110, 200, 290];
+var ENDE_Y = 226;
+function bahn(sx, sy, ex, steps, kurve) {
+  var p = [];
+  for (var i = 0; i < steps; i++) {
+    var t = i / (steps - 1);
+    var tx = Math.pow(t, kurve);
+    p.push({ x: sx + (ex - sx) * tx, y: sy + (ENDE_Y - sy) * t });
+  }
+  return p;
+}
+var BAHN = [
+  bahn(262, 76, BOOT_X[0], 7, 0.8),
+  bahn(292, 78, BOOT_X[1], 6, 0.85),
+  bahn(322, 80, BOOT_X[2], 5, 1)
+];
+var BAUM_PUNKT = { x: 341, y: 128 };   // Springer verfängt sich an der linken Astspitze der Föhre
+
+/* ---------- Zustand ---------- */
+var S = {
+  modus: null,      // 'A' | 'B' | null (Vorführung)
+  demo: true,
+  laeuft: false,
+  pause: false,
+  punkte: 0,
+  fehler: 0,
+  boot: 1,
+  springer: [],
+  tick: 0,
+  acc: 0,
+  stopp: 0,         // Zeit (ms), in der das Spiel nach einem Fehler steht
+  spritzer: null,   // Bahn mit Spritzer
+  blitz: 0,         // Fang-Anzeige
+  ruder: 0,
+  bonus: 0,
+  aus: false
+};
+var rekord = { A: 0, B: 0 };
+try { rekord.A = parseInt(localStorage.getItem('seesprung-rekord-A') || '0', 10) || 0; } catch (e) {}
+try { rekord.B = parseInt(localStorage.getItem('seesprung-rekord-B') || '0', 10) || 0; } catch (e) {}
+
+function takt() {
+  var m = S.modus || 'A';
+  var basis = m === 'B' ? 470 : 560;
+  var boden = m === 'B' ? 215 : 265;
+  var welle = S.punkte % 100;                 // in jeder Hunderter-Welle schneller, dann kurz Luft
+  var stufe = Math.floor(S.punkte / 100);
+  return Math.max(boden, basis - welle * 1.9 - stufe * 30);
+}
+function maxSpringer() {
+  if (S.modus === 'B') return Math.min(6, 2 + Math.floor(S.punkte / 30));
+  return Math.min(4, 1 + Math.floor(S.punkte / 35));
+}
+
+function pfadFuer(bahnNr, baum) {
+  var b = BAHN[bahnNr];
+  if (!baum) return b.slice();
+  var n = 2 + Math.floor(Math.random() * (S.modus === 'B' ? 7 : 5));
+  var p = [b[0], b[1]];
+  for (var i = 0; i < n; i++) p.push({ x: BAUM_PUNKT.x, y: BAUM_PUNKT.y, baum: true });
+  p.push(b[3], b[4]);
+  return p;
+}
+
+function neuerSpringer() {
+  var anzahl = S.springer.length;
+  if (anzahl >= maxSpringer()) return;
+  var chance = S.modus === 'B' ? 0.6 : 0.45;
+  if (S.demo) chance = 0.5;
+  if (anzahl > 0 && Math.random() > chance) return;
+  var bahnNr = Math.floor(Math.random() * 3);
+  for (var k = 0; k < S.springer.length; k++) {
+    if (S.springer[k].bahn === bahnNr && S.springer[k].idx === 0) return;
+  }
+  var baum = false;
+  if (bahnNr === 2 && Math.random() < 0.3) {
+    baum = true;
+    for (var j = 0; j < S.springer.length; j++) if (S.springer[j].baum) baum = false;
+  }
+  var pfad = pfadFuer(bahnNr, baum);
+  var faellig = S.tick + pfad.length;    // Tick, an dem er gefangen sein muss
+  var abstand = S.modus === 'B' ? 1 : 2;
+  for (var q = 0; q < S.springer.length; q++) {
+    if (Math.abs(S.springer[q].faellig - faellig) < abstand) return;
+  }
+  S.springer.push({ bahn: bahnNr, pfad: pfad, idx: 0, faellig: faellig, baum: baum });
+}
+
+function amEnde(j) { return j.idx === j.pfad.length - 1; }
+
+function fangen(j) {
+  S.springer.splice(S.springer.indexOf(j), 1);
+  S.blitz = 260;
+  if (S.demo) { ton('fang'); return; }
+  S.punkte++;
+  ton('fang');
+  if ((S.punkte === 200 || S.punkte === 500) && S.fehler > 0) {
+    S.fehler = 0;
+    S.bonus = 1600;
+    ton('bonus');
+  }
+}
+
+function verpassen(j) {
+  S.springer.splice(S.springer.indexOf(j), 1);
+  S.spritzer = j.bahn;
+  S.stopp = 1500;
+  if (!S.demo) S.fehler++;
+  ton('fehler');
+}
+
+function schritt() {
+  S.tick++;
+  S.ruder ^= 1;
+  // Wer am Ende hängt, wird jetzt entschieden
+  var faellig = S.springer.filter(amEnde);
+  for (var i = 0; i < faellig.length; i++) {
+    if (faellig[i].bahn === S.boot) fangen(faellig[i]);
+    else { verpassen(faellig[i]); return; }
+  }
+  for (var k = 0; k < S.springer.length; k++) S.springer[k].idx++;
+  neuerSpringer();
+  if (S.demo) demoSteuern();
+  else if (S.springer.length) ton('tick');
+}
+
+function boot(richtung) {
+  if (!S.laeuft || S.pause || S.stopp > 0) return;
+  var neu = Math.max(0, Math.min(2, S.boot + richtung));
+  if (neu === S.boot) return;
+  S.boot = neu;
+  // Fangen sofort, wenn der Springer schon unten wartet
+  for (var i = 0; i < S.springer.length; i++) {
+    var j = S.springer[i];
+    if (amEnde(j) && j.bahn === S.boot) { fangen(j); break; }
+  }
+  draw();
+}
+
+function demoSteuern() {
+  var ziel = null;
+  for (var i = 0; i < S.springer.length; i++) {
+    var j = S.springer[i];
+    if (!ziel || j.faellig < ziel.faellig) ziel = j;
+  }
+  if (!ziel) return;
+  if (ziel.bahn > S.boot) S.boot++;
+  else if (ziel.bahn < S.boot) S.boot--;
+  for (var k = 0; k < S.springer.length; k++) {
+    if (amEnde(S.springer[k]) && S.springer[k].bahn === S.boot) { fangen(S.springer[k]); break; }
+  }
+}
+
+/* ---------- Ablauf ---------- */
+function starte(modus) {
+  tonAn();
+  S.modus = modus; S.demo = false; S.laeuft = true; S.pause = false; S.aus = false;
+  S.punkte = 0; S.fehler = 0; S.boot = 1; S.springer = []; S.tick = 0; S.acc = 0;
+  S.stopp = 0; S.spritzer = null; S.bonus = 0;
+  zeige(null);
+  document.getElementById('pause').hidden = false;
+}
+function vorfuehrung() {
+  S.modus = null; S.demo = true; S.laeuft = true; S.pause = false; S.aus = false;
+  S.punkte = 0; S.fehler = 0; S.boot = 1; S.springer = []; S.tick = 0; S.acc = 0;
+  S.stopp = 0; S.spritzer = null; S.bonus = 0;
+  document.getElementById('pause').hidden = true;
+  rekordText();
+  zeige('startScreen');
+}
+function ende() {
+  S.laeuft = false; S.aus = true;
+  var m = S.modus;
+  if (S.punkte > rekord[m]) {
+    rekord[m] = S.punkte;
+    try { localStorage.setItem('seesprung-rekord-' + m, String(rekord[m])); } catch (e) {}
+  }
+  document.getElementById('endPunkte').textContent = S.punkte;
+  document.getElementById('endRekord').textContent = 'Spiel ' + m + ' · Rekord ' + rekord[m];
+  document.getElementById('pause').hidden = true;
+  zeige('overScreen');
+}
+function pausieren(an) {
+  if (S.demo || !S.laeuft) return;
+  S.pause = an;
+  zeige(an ? 'pauseScreen' : null);
+}
+function zeige(id) {
+  ['startScreen', 'overScreen', 'pauseScreen'].forEach(function (x) {
+    document.getElementById(x).hidden = x !== id;
+  });
+}
+function rekordText() {
+  document.getElementById('rekA').textContent = 'Rekord ' + rekord.A;
+  document.getElementById('rekB').textContent = 'Rekord ' + rekord.B;
+}
+
+var letzte = 0;
+function loop(ts) {
+  var dt = letzte ? Math.min(100, ts - letzte) : 0;
+  letzte = ts;
+  if (S.laeuft && !S.pause) {
+    if (S.blitz > 0) S.blitz -= dt;
+    if (S.bonus > 0) S.bonus -= dt;
+    if (S.stopp > 0) {
+      S.stopp -= dt;
+      if (S.stopp <= 0) {
+        S.spritzer = null;
+        if (S.demo && S.fehler) S.fehler = 0;
+        if (!S.demo && S.fehler >= 3) ende();
+      }
+    } else {
+      S.acc += dt;
+      var t = takt();
+      while (S.acc >= t && S.stopp <= 0 && S.laeuft) { S.acc -= t; schritt(); }
+    }
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- Ton ---------- */
+var ac = null;
+var tonEin = true;
+try { tonEin = localStorage.getItem('seesprung-ton') !== 'aus'; } catch (e) {}
+function tonAn() {
+  if (!tonEin) return;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { ac = null; }
+}
+function piep(f, dauer, wann) {
+  if (!ac || !tonEin) return;
+  var o = ac.createOscillator(), g = ac.createGain();
+  var t0 = ac.currentTime + (wann || 0);
+  o.type = 'square'; o.frequency.value = f;
+  g.gain.setValueAtTime(0.045, t0);
+  g.gain.setValueAtTime(0, t0 + dauer);
+  o.connect(g); g.connect(ac.destination);
+  o.start(t0); o.stop(t0 + dauer + 0.02);
+}
+function ton(art) {
+  if (S.demo) return;
+  if (art === 'tick') piep(880, 0.018);
+  else if (art === 'fang') piep(1760, 0.05);
+  else if (art === 'fehler') { piep(440, 0.12); piep(330, 0.12, 0.16); piep(220, 0.25, 0.32); }
+  else if (art === 'bonus') { [1047, 1319, 1568, 2093].forEach(function (f, i) { piep(f, 0.08, i * 0.1); }); }
+}
+function tonKnopf() {
+  var b = document.getElementById('ton');
+  b.textContent = tonEin ? 'Ton an' : 'Ton aus';
+}
+
+/* ---------- Zeichnen ---------- */
+function farbe(c) { ctx.strokeStyle = c; ctx.fillStyle = c; }
+
+var SEG = {
+  0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg'
+};
+function ziffer(x, y, wert) {
+  var w = 13, h = 22, s = 2.6;
+  var segs = {
+    a: [x + s, y, w - 2 * s, s], d: [x + s, y + h - s, w - 2 * s, s], g: [x + s, y + h / 2 - s / 2, w - 2 * s, s],
+    f: [x, y + s, s, h / 2 - 1.5 * s], b: [x + w - s, y + s, s, h / 2 - 1.5 * s],
+    e: [x, y + h / 2 + s / 2, s, h / 2 - 1.5 * s], c: [x + w - s, y + h / 2 + s / 2, s, h / 2 - 1.5 * s]
+  };
+  var an = wert === null ? '' : SEG[wert];
+  for (var k in segs) {
+    farbe(an.indexOf(k) >= 0 ? INK : GHOST);
+    var r = segs[k];
+    ctx.fillRect(r[0], r[1], r[2], r[3]);
+  }
+}
+function zahl(x, y, n, stellen, fuehrendeNull) {
+  var str = String(n);
+  while (str.length < stellen) str = (fuehrendeNull ? '0' : ' ') + str;
+  for (var i = 0; i < stellen; i++) {
+    var ch = str[i];
+    ziffer(x + i * 17, y, ch === ' ' ? null : parseInt(ch, 10));
+  }
+}
+
+function springerFigur(x, y, c, bein) {
+  farbe(c);
+  ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // Schirm
+  ctx.beginPath();
+  ctx.ellipse(x, y - 19, 13, 9, 0, Math.PI, 0);
+  ctx.quadraticCurveTo(x + 9, y - 22, x + 4.3, y - 19);
+  ctx.quadraticCurveTo(x, y - 22, x - 4.3, y - 19);
+  ctx.quadraticCurveTo(x - 9, y - 22, x - 13, y - 19);
+  ctx.fill();
+  // Leinen
+  ctx.beginPath();
+  ctx.moveTo(x - 12, y - 18); ctx.lineTo(x - 3, y - 4);
+  ctx.moveTo(x + 12, y - 18); ctx.lineTo(x + 3, y - 4);
+  ctx.moveTo(x, y - 19); ctx.lineTo(x, y - 7);
+  ctx.stroke();
+  // Figur
+  ctx.beginPath(); ctx.arc(x, y - 3.5, 2.7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x, y - 1); ctx.lineTo(x, y + 6);
+  ctx.moveTo(x - 3, y - 4); ctx.lineTo(x, y + 1); ctx.lineTo(x + 3, y - 4);
+  ctx.moveTo(x, y + 6); ctx.lineTo(x - 3 + bein, y + 11);
+  ctx.moveTo(x, y + 6); ctx.lineTo(x + 3 + bein, y + 11);
+  ctx.stroke();
+}
+// Im Baum: Schirm hängt gekippt an der Astspitze, Springer baumelt links daneben an den Leinen,
+// schwingt hin und her und strampelt. phase 0/1 = Schwung, los = reißt sich gerade frei, kick = Beine.
+function haengender(x, y, c, phase, los, kick) {
+  farbe(c);
+  ctx.lineWidth = 1.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // Schirm: normaler Schirm, über den Ast gekippt (beim Losreißen rutscht er ab)
+  ctx.save();
+  ctx.translate(los ? x - 2 : x + 4, los ? y + 3 : y - 3);
+  ctx.rotate(los ? 0.35 : 0.95);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 12, 8, 0, Math.PI, 0);
+  ctx.quadraticCurveTo(8, -3, 4, 0);
+  ctx.quadraticCurveTo(0, -3, -4, 0);
+  ctx.quadraticCurveTo(-8, -3, -12, 0);
+  ctx.fill();
+  ctx.restore();
+  if (los) {   // Risslinien und abbrechende Zweige an der Astspitze
+    ctx.beginPath();
+    ctx.moveTo(x + 6, y - 6); ctx.lineTo(x + 10, y - 10);
+    ctx.moveTo(x + 8, y);     ctx.lineTo(x + 13, y - 1);
+    ctx.moveTo(x + 4, y + 5); ctx.lineTo(x + 8, y + 8);
+    ctx.stroke();
+  }
+  // Pendel unter dem Schirm: Leinen von zwei Schirmpunkten zu den Händen
+  var ax = los ? x - 4 : x + 1, ay = los ? y + 3 : y;
+  var a = los ? -0.05 : (phase ? -0.5 : -0.12);
+  var co = Math.cos(-a), si = Math.sin(-a);
+  function welt(px, py) { return [ax + px * co - py * si, ay + px * si + py * co]; }
+  var hl = welt(-2.5, 19), hr = welt(2.5, 19);
+  var r1 = los ? [x - 13, y + 2] : [x - 3, y - 8];
+  var r2 = los ? [x + 7, y + 8] : [x + 8, y + 4];
+  ctx.beginPath();
+  ctx.moveTo(r1[0], r1[1]); ctx.lineTo(hl[0], hl[1]);
+  ctx.moveTo(r2[0], r2[1]); ctx.lineTo(hr[0], hr[1]);
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(-a);
+  ctx.beginPath();
+  var w = los ? 0 : (kick ? 2.5 : -1.5);          // Arme winken um Hilfe
+  ctx.moveTo(-2.5, 19); ctx.lineTo(-7, 15 - w);
+  ctx.moveTo(2.5, 19);  ctx.lineTo(7, 15 + w);
+  ctx.moveTo(-2.5, 19); ctx.lineTo(2.5, 19);
+  ctx.moveTo(0, 19); ctx.lineTo(0, 26);          // Rumpf
+  var k = los ? 0 : (kick ? 2.4 : -2.4);          // Strampeln
+  var spreiz = los ? 4.5 : 2.5;
+  ctx.moveTo(0, 26); ctx.lineTo(-spreiz + k, 31); ctx.lineTo(-spreiz + k * 0.3, 34);
+  ctx.moveTo(0, 26); ctx.lineTo(spreiz + k, 31.5); ctx.lineTo(spreiz + k * 1.6, 34);
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 15, 2.8, 0, Math.PI * 2); ctx.fill();   // Kopf
+  ctx.restore();
+}
+
+function bootFigur(x, c, ruder, gast) {
+  farbe(c);
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 25, 247); ctx.lineTo(x + 25, 247); ctx.lineTo(x + 18, 258); ctx.lineTo(x - 18, 258); ctx.closePath();
+  ctx.fill();
+  // Ruderer
+  ctx.beginPath(); ctx.arc(x + 8, 236, 2.8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + 8, 239); ctx.lineTo(x + 8, 246);
+  ctx.moveTo(x + 8, 241); ctx.lineTo(x + 1, 243);
+  ctx.moveTo(x + 1, 243); ctx.lineTo(ruder ? x - 16 : x - 10, ruder ? 262 : 265);
+  ctx.stroke();
+  if (gast) {
+    ctx.beginPath(); ctx.arc(x - 12, 237, 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x - 12, 240); ctx.lineTo(x - 12, 246);
+    ctx.moveTo(x - 16, 236); ctx.lineTo(x - 12, 241); ctx.lineTo(x - 8, 236);
+    ctx.stroke();
+  }
+}
+
+function spritzerFigur(x, c, phase) {
+  farbe(c);
+  ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, 258, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x - 4, 254); ctx.lineTo(x - 7, phase ? 247 : 249);
+  ctx.moveTo(x + 4, 254); ctx.lineTo(x + 7, phase ? 249 : 247);
+  ctx.moveTo(x - 10, 262); ctx.lineTo(x - 15, 256);
+  ctx.moveTo(x + 10, 262); ctx.lineTo(x + 15, 256);
+  ctx.moveTo(x - 7, 263); ctx.lineTo(x - 9, 251);
+  ctx.moveTo(x + 7, 263); ctx.lineTo(x + 9, 251);
+  ctx.stroke();
+}
+
+function flugzeug(prop) {
+  farbe(INK);
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  // Rumpf
+  ctx.beginPath(); ctx.ellipse(352, 34, 26, 6, 0, 0, Math.PI * 2); ctx.fill();
+  // Leitwerk
+  ctx.beginPath(); ctx.moveTo(372, 32); ctx.lineTo(384, 20); ctx.lineTo(386, 33); ctx.closePath(); ctx.fill();
+  // Flügel
+  ctx.fillRect(334, 26, 34, 3);
+  // Schwimmer
+  ctx.beginPath();
+  ctx.moveTo(342, 40); ctx.lineTo(340, 47); ctx.moveTo(362, 40); ctx.lineTo(364, 47);
+  ctx.moveTo(332, 48); ctx.lineTo(372, 48);
+  ctx.stroke();
+  // Propeller
+  ctx.beginPath();
+  if (prop) { ctx.moveTo(325, 26); ctx.lineTo(325, 42); } else { ctx.moveTo(321, 34); ctx.lineTo(329, 34); }
+  ctx.stroke();
+  // offene Tür
+  farbe('#c3c8ad'); ctx.fillRect(344, 31, 6, 5);
+}
+
+function kulisse() {
+  farbe(PRINT);
+  ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  // Föhre am Ufer rechts
+  ctx.fillRect(363, 150, 5, 98);
+  ctx.beginPath(); ctx.moveTo(365, 92); ctx.lineTo(385, 130); ctx.lineTo(345, 130); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(365, 112); ctx.lineTo(392, 158); ctx.lineTo(338, 158); ctx.closePath(); ctx.fill();
+  // Ufer
+  ctx.beginPath(); ctx.moveTo(328, 252); ctx.quadraticCurveTo(350, 244, 400, 246); ctx.lineTo(400, 300); ctx.lineTo(332, 300); ctx.closePath(); ctx.fill();
+  // Steg links
+  ctx.fillRect(0, 244, 58, 4);
+  ctx.fillRect(10, 248, 3, 18); ctx.fillRect(44, 248, 3, 18);
+  // Wellen
+  ctx.beginPath();
+  for (var row = 0; row < 3; row++) {
+    var y = 268 + row * 9;
+    for (var x = 10 + (row % 2) * 12; x < 330; x += 24) {
+      ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6, y - 4, x + 12, y);
+    }
+  }
+  ctx.stroke();
+  // Wolken
+  ctx.beginPath();
+  ctx.arc(120, 30, 8, Math.PI, 0); ctx.arc(134, 28, 10, Math.PI, 0); ctx.arc(148, 31, 7, Math.PI, 0);
+  ctx.stroke();
+}
+
+function beschriftung(text, x, y, an, ausrichtung) {
+  ctx.font = '600 9px "IBM Plex Mono", ui-monospace, monospace';
+  ctx.textAlign = ausrichtung || 'left';
+  farbe(an ? INK : GHOST);
+  ctx.fillText(text, x, y);
+}
+
+function draw() {
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  var g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#cdd2b7'); g.addColorStop(1, '#b4ba9b');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  kulisse();
+
+  // Geistersegmente: jede mögliche Position schwach
+  var b, i;
+  for (b = 0; b < 3; b++) {
+    for (i = 0; i < BAHN[b].length; i++) springerFigur(BAHN[b][i].x, BAHN[b][i].y, GHOST, 0);
+    bootFigur(BOOT_X[b], GHOST, 0, true);
+    spritzerFigur(BOOT_X[b], GHOST, 0);
+  }
+  haengender(BAUM_PUNKT.x, BAUM_PUNKT.y, GHOST, 0, false, 0);
+  haengender(BAUM_PUNKT.x, BAUM_PUNKT.y, GHOST, 1, false, 1);
+
+  flugzeug(S.tick % 2);
+
+  // Springer
+  for (i = 0; i < S.springer.length; i++) {
+    var j = S.springer[i];
+    var p = j.pfad[j.idx];
+    if (p.baum) {
+      var los = !j.pfad[j.idx + 1].baum;          // letzter Takt im Baum: reißt sich los
+      var kick = S.pause ? 0 : Math.floor(performance.now() / 160) % 2;
+      haengender(p.x, p.y, INK, S.tick % 2, los, kick);
+    }
+    else springerFigur(p.x, p.y, INK, (S.tick + i) % 2 ? 1.5 : -1.5);
+  }
+
+  // Boot
+  bootFigur(BOOT_X[S.boot], INK, S.ruder, S.blitz > 0);
+
+  // Spritzer (blinkt)
+  if (S.spritzer !== null && Math.floor(S.stopp / 180) % 2 === 0) {
+    spritzerFigur(BOOT_X[S.spritzer], INK, Math.floor(S.stopp / 180) % 4 === 0);
+  }
+
+  // Anzeige oben links: im Spiel Punkte, in der Vorführung die Uhr
+  if (S.demo) {
+    var d = new Date();
+    zahl(12, 10, d.getHours(), 2, false);
+    if (d.getSeconds() % 2 === 0) { farbe(INK); } else { farbe(GHOST); }
+    ctx.fillRect(48, 16, 3, 3); ctx.fillRect(48, 24, 3, 3);
+    zahl(56, 10, d.getMinutes(), 2, true);
+    beschriftung('UHR', 12, 44, true);
+  } else {
+    var zeigen = !(S.bonus > 0 && Math.floor(S.bonus / 200) % 2 === 1);
+    if (zeigen) zahl(12, 10, S.punkte % 1000, 3, false); else ziffernAus();
+    beschriftung('PUNKTE', 12, 44, true);
+  }
+
+  // Spielart
+  beschriftung('SPIEL A', 70, 294, S.modus === 'A');
+  beschriftung('SPIEL B', 120, 294, S.modus === 'B');
+
+  // Fehler-Anzeige: drei Rettungsringe
+  beschriftung('FEHLER', 338, 270, S.fehler > 0 && !S.demo);
+  for (i = 0; i < 3; i++) {
+    farbe(i < S.fehler && !S.demo ? INK : GHOST);
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(344 + i * 18, 284, 5, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+function ziffernAus() {
+  for (var i = 0; i < 3; i++) ziffer(12 + i * 17, 10, null);
+}
+
+/* ---------- Eingabe ---------- */
+function knopf(id, richtung) {
+  var el = document.getElementById(id);
+  el.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    tonAn();
+    el.classList.add('gedrueckt');
+    boot(richtung);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
+    el.addEventListener(t, function () { el.classList.remove('gedrueckt'); });
+  });
+}
+knopf('links', -1);
+knopf('rechts', 1);
+cv.addEventListener('pointerdown', function (e) {
+  if (S.demo) return;
+  var r = cv.getBoundingClientRect();
+  boot(e.clientX - r.left < r.width / 2 ? -1 : 1);
+});
+window.addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { boot(-1); e.preventDefault(); }
+  else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { boot(1); e.preventDefault(); }
+  else if (e.key === ' ' || e.key === 'p' || e.key === 'P') { if (!S.demo && S.laeuft) { pausieren(!S.pause); e.preventDefault(); } }
+});
+Array.prototype.forEach.call(document.querySelectorAll('[data-modus]'), function (b) {
+  b.addEventListener('click', function () { starte(b.getAttribute('data-modus')); });
+});
+document.getElementById('nochmal').addEventListener('click', function () { starte(S.modus || 'A'); });
+document.getElementById('menue').addEventListener('click', vorfuehrung);
+document.getElementById('weiter').addEventListener('click', function () { pausieren(false); });
+document.getElementById('aufgeben').addEventListener('click', function () { S.pause = false; ende(); });
+document.getElementById('pause').addEventListener('click', function () { pausieren(true); });
+document.getElementById('ton').addEventListener('click', function () {
+  tonEin = !tonEin;
+  try { localStorage.setItem('seesprung-ton', tonEin ? 'an' : 'aus'); } catch (e) {}
+  tonKnopf();
+  if (tonEin) tonAn();
+});
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden && S.laeuft && !S.demo) pausieren(true);
+});
+
+if (window.ResizeObserver) new ResizeObserver(resize).observe(box);
+window.addEventListener('resize', resize);
+tonKnopf();
+vorfuehrung();
+resize();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
